@@ -186,7 +186,3 @@ Please ensure that any contributions follow the coding style and standards outli
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-Let me know if you need any adjustments to this!
