@@ -1,9 +1,18 @@
 #include "ethereumclient.hpp"
 #include <iostream>
+#include <sstream>
 #include "logger.hpp"
 
+namespace {
+std::string toCompactJson(const Json::Value& value) {
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    return Json::writeString(writer, value);
+}
+}
+
 EthereumClient::EthereumClient(const std::string& nodeUrl, NetworkAdapter& networkAdapter)
-    : nodeUrl(nodeUrl), networkAdapter(networkAdapter) {}  // Correct initialization list
+    : nodeUrl(nodeUrl), networkAdapter(networkAdapter) {}
 
 std::optional<std::string> EthereumClient::executeCommand(const std::string& method, const Json::Value& params) {
     Json::Value payload;
@@ -44,43 +53,79 @@ void EthereumClient::processResult(const Json::Value& jsonResponse) {
     }
 
     if (jsonResponse.isMember("result")) {
-        std::string result = jsonResponse["result"].asString();
+        const Json::Value& resultValue = jsonResponse["result"];
+        std::string result = resultValue.isString() ? resultValue.asString() : toCompactJson(resultValue);
         std::cout << "Result: " << result << std::endl;
     } else {
         Logger::getInstance().log("Error: 'result' field not found in response.");
     }
 }
 
-std::optional<std::string> EthereumClient::getTransactionCount(const std::string& address) {
+std::optional<Json::Value> EthereumClient::executeAndExtractResult(const std::string& method, const Json::Value& params) {
+    auto response = executeCommand(method, params);
+    if (!response) {
+        return std::nullopt;
+    }
+
+    auto jsonResponse = parseResponse(*response);
+    if (!jsonResponse) {
+        return std::nullopt;
+    }
+
+    if (jsonResponse->isMember("error")) {
+        const Json::Value& error = (*jsonResponse)["error"];
+        const std::string message = error.isMember("message") ? error["message"].asString() : "Unknown RPC error";
+        Logger::getInstance().log("RPC method '" + method + "' failed: " + message);
+        return std::nullopt;
+    }
+
+    if (!jsonResponse->isMember("result")) {
+        Logger::getInstance().log("RPC method '" + method + "' returned no 'result' field.");
+        return std::nullopt;
+    }
+
+    return (*jsonResponse)["result"];
+}
+
+std::optional<std::string> EthereumClient::executeAndExtractStringResult(const std::string& method, const Json::Value& params) {
+    auto result = executeAndExtractResult(method, params);
+    if (!result) {
+        return std::nullopt;
+    }
+
+    if (result->isString()) {
+        return result->asString();
+    }
+
+    return toCompactJson(*result);
+}
+
+std::optional<std::string> EthereumClient::getTransactionCount(const std::string& address, const std::string& blockTag) {
     Json::Value params;
     params[0] = address;
+    params[1] = blockTag;
 
-    auto response = executeCommand("eth_getTransactionCount", params);
-    return response;
+    return executeAndExtractStringResult("eth_getTransactionCount", params);
 }
 
 std::optional<std::string> EthereumClient::getChainId() {
     Json::Value params;
-    auto response = executeCommand("eth_chainId", params);
-    return response;
+    return executeAndExtractStringResult("eth_chainId", params);
 }
 
 std::optional<std::string> EthereumClient::getNetworkVersion() {
-    Json::Value params; // Empty params array
-    auto response = executeCommand("net_version", params);
-    return response;
+    Json::Value params;
+    return executeAndExtractStringResult("net_version", params);
 }
 
-std::optional<std::string> EthereumClient::getSyncingStatus() {
+std::optional<Json::Value> EthereumClient::getSyncingStatus() {
     Json::Value params;
-    auto response = executeCommand("eth_syncing", params);
-    return response;
+    return executeAndExtractResult("eth_syncing", params);
 }
 
 std::optional<std::string> EthereumClient::getBlockNumber() {
     Json::Value params;
-    auto response = executeCommand("eth_blockNumber", params);
-    return response;
+    return executeAndExtractStringResult("eth_blockNumber", params);
 }
 
 std::optional<Json::Value> EthereumClient::getBlockByNumber(const std::string& blockNumber, bool fullTransactionData) {
@@ -88,12 +133,7 @@ std::optional<Json::Value> EthereumClient::getBlockByNumber(const std::string& b
     params[0] = blockNumber;
     params[1] = fullTransactionData;
 
-    auto response = executeCommand("eth_getBlockByNumber", params);
-    if (!response) {
-        return std::nullopt;
-    }
-
-    return parseResponse(*response);
+    return executeAndExtractResult("eth_getBlockByNumber", params);
 }
 
 std::optional<Json::Value> EthereumClient::getBlockByHash(const std::string& blockHash, bool fullTransactionData) {
@@ -101,24 +141,14 @@ std::optional<Json::Value> EthereumClient::getBlockByHash(const std::string& blo
     params[0] = blockHash;
     params[1] = fullTransactionData;
 
-    auto response = executeCommand("eth_getBlockByHash", params);
-    if (!response) {
-        return std::nullopt;
-    }
-
-    return parseResponse(*response);
+    return executeAndExtractResult("eth_getBlockByHash", params);
 }
 
 std::optional<Json::Value> EthereumClient::getTransactionByHash(const std::string& txHash) {
     Json::Value params;
     params[0] = txHash;
 
-    auto response = executeCommand("eth_getTransactionByHash", params);
-    if (!response) {
-        return std::nullopt;
-    }
-
-    return parseResponse(*response);
+    return executeAndExtractResult("eth_getTransactionByHash", params);
 }
 
 std::optional<std::string> EthereumClient::estimateGas(const std::string& from, const std::string& to, const std::string& value) {
@@ -129,41 +159,36 @@ std::optional<std::string> EthereumClient::estimateGas(const std::string& from, 
     txData["value"] = value;
     params[0] = txData;
 
-    auto response = executeCommand("eth_estimateGas", params);
-    return response;
+    return executeAndExtractStringResult("eth_estimateGas", params);
 }
 
 std::optional<std::string> EthereumClient::getGasPrice() {
     Json::Value params;
-    auto response = executeCommand("eth_gasPrice", params);
-    return response;
+    return executeAndExtractStringResult("eth_gasPrice", params);
 }
 
 std::optional<std::string> EthereumClient::sendTransaction(const std::string& rawTransaction) {
     Json::Value params;
     params[0] = rawTransaction;
 
-    auto response = executeCommand("eth_sendTransaction", params);
-    return response;
+    return executeAndExtractStringResult("eth_sendRawTransaction", params);
 }
 
 std::optional<Json::Value> EthereumClient::getLogs(const Json::Value& params) {
-    auto response = executeCommand("eth_getLogs", params);
-    if (!response) {
-        return std::nullopt;
+    Json::Value rpcParams;
+    if (params.isArray()) {
+        rpcParams = params;
+    } else {
+        rpcParams = Json::arrayValue;
+        rpcParams.append(params);
     }
 
-    return parseResponse(*response);
+    return executeAndExtractResult("eth_getLogs", rpcParams);
 }
 
 std::optional<Json::Value> EthereumClient::getTransactionReceipt(const std::string& txHash) {
     Json::Value params;
     params[0] = txHash;
 
-    auto response = executeCommand("eth_getTransactionReceipt", params);
-    if (!response) {
-        return std::nullopt;
-    }
-
-    return parseResponse(*response);
+    return executeAndExtractResult("eth_getTransactionReceipt", params);
 }

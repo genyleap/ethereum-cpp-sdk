@@ -455,7 +455,15 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC ${LIB_TARGET_COMPILER_DEFINATI
 #Install rules specified by calls to the install() command within a source directory. are executed in order during installation.
 install(TARGETS ${PROJECT_NAME} DESTINATION build/bin)
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/config/system-config.json DESTINATION ${CMAKE_BINARY_DIR}/config/)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/config)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/system-config.json ${CMAKE_BINARY_DIR}/config/system-config.json COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/system-config.json ${CMAKE_BINARY_DIR}/config.json COPYONLY)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${CMAKE_CURRENT_SOURCE_DIR}/config/system-config.json
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>/config.json
+)
 
 #Ignore unused files.
 list(APPEND CPACK_SOURCE_IGNORE_FILES /.git/ /build/ .gitignore .DS_Store)

@@ -90,8 +90,8 @@ public:
     std::optional<std::string> getGasPrice();
 
     /**
-     * @brief Sends a raw transaction.
-     * @param rawTransaction The raw transaction data.
+     * @brief Sends a signed raw transaction.
+     * @param rawTransaction The signed raw transaction bytes encoded as a hex string.
      * @return The transaction hash (if successful), or an empty std::optional if an error occurs.
      */
     std::optional<std::string> sendTransaction(const std::string& rawTransaction);
@@ -115,9 +115,10 @@ public:
     /**
      * @brief Retrieves the transaction count (nonce) for an address.
      * @param address The address for which to fetch the transaction count.
+     * @param blockTag The block parameter (e.g., "latest", "pending", or a block number in hex).
      * @return The transaction count (nonce) as a string, or an empty std::optional if an error occurs.
      */
-    std::optional<std::string> getTransactionCount(const std::string& address);
+    std::optional<std::string> getTransactionCount(const std::string& address, const std::string& blockTag = "latest");
 
     /**
      * @brief Retrieves the chain ID of the connected Ethereum network.
@@ -135,9 +136,20 @@ public:
      * @brief Checks if the Ethereum node is syncing.
      * @return Syncing status in JSON format, or an empty std::optional if an error occurs.
      */
-    std::optional<std::string> getSyncingStatus();
+    std::optional<Json::Value> getSyncingStatus();
 
 private:
+    /**
+     * @brief Executes an RPC method and extracts the "result" field from the response.
+     */
+    std::optional<Json::Value> executeAndExtractResult(const std::string& method, const Json::Value& params);
+
+    /**
+     * @brief Executes an RPC method and extracts the "result" field as a string.
+     * If the result is not a JSON string, it is serialized as compact JSON.
+     */
+    std::optional<std::string> executeAndExtractStringResult(const std::string& method, const Json::Value& params);
+
     std::string nodeUrl; ///< The URL of the Ethereum node.
     NetworkAdapter& networkAdapter; ///< Reference to the network adapter used for sending requests.
 };

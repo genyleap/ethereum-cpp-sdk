@@ -28,6 +28,11 @@ public:
      */
     ~NetworkAdapter();
 
+    NetworkAdapter(const NetworkAdapter&) = delete;
+    NetworkAdapter& operator=(const NetworkAdapter&) = delete;
+    NetworkAdapter(NetworkAdapter&&) = delete;
+    NetworkAdapter& operator=(NetworkAdapter&&) = delete;
+
     /**
      * @brief Sends a POST request to the specified URL with the provided data.
      * @param url The URL to send the POST request to (e.g., the Ethereum node endpoint).
@@ -37,7 +42,7 @@ public:
     std::optional<std::string> sendPostRequest(const std::string& url, const std::string& data);
 
 private:
-    CURL* curlHandle; ///< The libcurl handle used for making HTTP requests.
+    CURL* curlHandle = nullptr; ///< The libcurl handle used for making HTTP requests.
 
     /**
      * @brief Callback function used by libcurl to write the response data.

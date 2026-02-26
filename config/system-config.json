@@ -1,6 +1,7 @@
 {
     "language":"english",
     "debug": true,
+    "nodeUrl": "http://127.0.0.1:8545",
     "system":{
     "codename":"ethereum-cpp-sdk",
     "version":"1.0.0",

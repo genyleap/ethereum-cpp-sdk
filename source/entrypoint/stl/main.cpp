@@ -51,7 +51,7 @@ int main() {
      */
     auto blockNumber = client.getBlockNumber();
     if (blockNumber) {
-        std::print("Current Block Number: {}", *blockNumber);
+        std::print("Current Block Number: {}\n", *blockNumber);
     }
 
            // Example 2: Get block information by block number
@@ -65,7 +65,7 @@ int main() {
     std::string blockNumberStr = "0x5d5f"; ///< Example block number in hexadecimal format.
     auto blockData = client.getBlockByNumber(blockNumberStr, true); // Fetch full transaction data
     if (blockData) {
-        std::print("Block Data: {}", blockData->toStyledString());
+        std::print("Block Data: {}\n", blockData->toStyledString());
     }
 
            // Example 3: Estimate gas for a transaction
@@ -80,7 +80,7 @@ int main() {
     std::string value = "0x9184e72a"; ///< Example value in hexadecimal.
     auto gasEstimate = client.estimateGas(from, to, value);
     if (gasEstimate) {
-        std::print("Estimated Gas: ", *gasEstimate);
+        std::print("Estimated Gas: {}\n", *gasEstimate);
     }
 
            // Example 4: Get Ethereum network version
@@ -92,7 +92,7 @@ int main() {
      */
     auto protocolVersion = client.getNetworkVersion();
     if (protocolVersion) {
-        std::print("Ethereum Protocol Version: ", *protocolVersion);
+        std::print("Ethereum Protocol Version: {}\n", *protocolVersion);
     }
 
     return 0; ///< Return 0 if the program executed successfully.

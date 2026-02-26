@@ -11,7 +11,7 @@ endif()
 if(USE_CURL)
     # Search Curl
     find_package(PkgConfig REQUIRED)
-    pkg_search_module(OPENSSL REQUIRED openssl)
+    pkg_search_module(CURL REQUIRED libcurl)
 
     if(CURL_FOUND)
         message(STATUS "Using Curl ${CURL_VERSION}")
@@ -27,3 +27,5 @@ endif()
 if(NOT CURL_FOUND)
     return()
 endif()
+
+set(Curl_FOUND ${CURL_FOUND})
